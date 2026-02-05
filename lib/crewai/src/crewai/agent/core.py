@@ -1178,6 +1178,7 @@ class Agent(BaseAgent):
             tools = []
             for tool_def in tools_list:
                 tool_name = tool_def.get("name", "")
+                original_tool_name = tool_def.get("original_name", tool_name)
                 if not tool_name:
                     continue
 
@@ -1199,6 +1200,7 @@ class Agent(BaseAgent):
                         tool_name=tool_name,
                         tool_schema=tool_schema,
                         server_name=server_name,
+                        original_tool_name=original_tool_name,
                     )
                     tools.append(native_tool)
                 except Exception as e:
