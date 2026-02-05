@@ -1440,70 +1440,14 @@ class Agent(BaseAgent):
         Returns:
             Pydantic BaseModel class
         """
-        from pydantic import Field, create_model
-
-        properties = json_schema.get("properties", {})
-        required_fields = json_schema.get("required", [])
-
-        field_definitions: dict[str, Any] = {}
-
-        for field_name, field_schema in properties.items():
-            field_type = self._json_type_to_python(field_schema)
-            field_description = field_schema.get("description", "")
-
-            is_required = field_name in required_fields
-
-            if is_required:
-                field_definitions[field_name] = (
-                    field_type,
-                    Field(..., description=field_description),
-                )
-            else:
-                field_definitions[field_name] = (
-                    field_type | None,
-                    Field(default=None, description=field_description),
-                )
+        from crewai.utilities.pydantic_schema_utils import create_model_from_schema
 
         model_name = f"{tool_name.replace('-', '_').replace(' ', '_')}Schema"
-        return create_model(model_name, **field_definitions)  # type: ignore[no-any-return]
-
-    def _json_type_to_python(self, field_schema: dict[str, Any]) -> type:
-        """Convert JSON Schema type to Python type.
-
-        Args:
-            field_schema: JSON Schema field definition
-
-        Returns:
-            Python type
-        """
-
-        json_type = field_schema.get("type")
-
-        if "anyOf" in field_schema:
-            types: list[type] = []
-            for option in field_schema["anyOf"]:
-                if "const" in option:
-                    types.append(str)
-                else:
-                    types.append(self._json_type_to_python(option))
-            unique_types = list(set(types))
-            if len(unique_types) > 1:
-                result: Any = unique_types[0]
-                for t in unique_types[1:]:
-                    result = result | t
-                return result  # type: ignore[no-any-return]
-            return unique_types[0]
-
-        type_mapping: dict[str | None, type] = {
-            "string": str,
-            "number": float,
-            "integer": int,
-            "boolean": bool,
-            "array": list,
-            "object": dict,
-        }
-
-        return type_mapping.get(json_type, Any)
+        return create_model_from_schema(
+            json_schema,
+            model_name=model_name,
+            enrich_descriptions=True,
+        )
 
     def _fetch_amp_mcp_config(self, mcp_slug: str) -> dict[str, Any] | None:
         """Fetch MCP server configuration from crewai-oauth service.
